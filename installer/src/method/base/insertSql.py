@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 from pprint import pprint
 
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import TimeoutException
 
 
 # 自作モジュール
@@ -19,13 +20,13 @@ from .utils import Logger
 from .elementManager import ElementManager
 from .AiOrder import ChatGPTOrder
 from .textManager import TextManager
-from dataclass import ListPageInfo, DetailPageInfo
+from ..dataclass import ListPageInfo, DetailPageInfo
 from .SQLite import SQLite
 from .decorators import Decorators
 from .jumpTargetPage import JumpTargetPage
-from const import ChatGptPrompt, ChatgptUtils, TableName
-from constElementInfo import ElementPath, ElementSpecify
-from constSqliteTable import TableSchemas
+from ..const import ChatGptPrompt, ChatgptUtils, TableName
+from ..constElementInfo import ElementPath, ElementSpecify, ErrorElement
+from ..constSqliteTable import TableSchemas
 
 decoInstance = Decorators(debugMode=True)
 
@@ -60,13 +61,13 @@ class InsertSql:
 # 一覧の物件リストから詳細ページへ移動して取得する
 
     @decoInstance.funcBase
-    def getListPageInfo(self, delay: int = 2):
+    def getListPageInfo(self):
 
         # ジャンプしてURLへ移動して検索画面を消去まで実施
-        self._navigateToTargetPage(delay=delay)
+        self.popupRemove()
 
-        #! テスト中に設定ｚ
-        maxRetries = 1
+        #! テスト中に設定
+        maxRetries = 10
         pageCount = 0
         count = 0
         listPageInfoDict = {}
@@ -82,8 +83,8 @@ class InsertSql:
 
 
             #! テスト時はnewElementの要素を制限
-            if len(newElement) > 2:
-                newElement = newElement[:2]  # 最初の2つの要素のみを使用
+            # if len(newElement) > 2:
+            #     newElement = newElement[:2]  # 最初の2つの要素のみを使用
 
 
             if len(newElement) == 0:
@@ -116,22 +117,28 @@ class InsertSql:
                 print(f"{count} 個目 listPageInfo: \n{listPageInfoDict[count]}")
 
 
-                #! テスト中に設定
-                pageCount += 1
-
-
-            #! テスト中はコメントアウト→本番の際には解除
-            # try:
-            #     # 次へのページをClick
-            #     self.element.clickElement(
-            #         by='xpath',
-            #         value='//div[@class="numberArea"]//a[contains(text(), ">")]'
-            #     )
+                # #! テスト中に設定
                 # pageCount += 1
 
-            # except NoSuchElementException:
-            #     self.logger.error(f"次のページが見当たらないため処理を終了: {count}目実施")
-            #     break
+
+            # ! テスト中はコメントアウト→本番の際には解除
+            try:
+                # 次へのページをClick
+                self.element.clickElement(
+                    by='xpath',
+                    value='//div[@class="numberArea"]//a[contains(text(), ">")]'
+                )
+                pageCount += 1
+
+            except NoSuchElementException:
+                self.logger.error(f"次のページが見当たらないため処理を終了: {count}目実施")
+                break
+
+            except ElementClickInterceptedException:
+                self.logger.error(f"再度検索画面が出現。")
+                self.popupRemove()
+                continue
+
 
         print(f"listPageInfo{count}個 全データ:\n{listPageInfoDict}")
         return listPageInfoDict
@@ -436,8 +443,9 @@ class InsertSql:
 # ----------------------------------------------------------------------------------
 
 
-    @decoInstance.funcBase
+    @decoInstance.retryAction
     def _navigateToTargetPage(self, delay: int):
+
         # self.jumpTargetPage.flowJumpTargetPage(targetUrl=targetUrl)
         # time.sleep(delay)
 
@@ -452,6 +460,56 @@ class InsertSql:
         )
         time.sleep(delay)
         self.logger.debug(f"新しいページに移動後、Refresh完了")
+
+
+# ----------------------------------------------------------------------------------
+
+
+
+    def popupRemove(self, delay: int = 2):
+        try:
+            while True:
+                # self.chrome.refresh()
+                # time.sleep(delay)
+
+                # 検索画面を消去
+                popupElement = self.element.clickElement(
+                    by=ElementSpecify.XPATH.value,
+                    value=ElementPath.SEARCH_DELETE_BTN_PATH.value
+                )
+                # エラーが起きる可能性があるため検知しやすくするためスリープ
+                time.sleep(delay)
+
+                if not popupElement:
+                    self.logger.info(f"除去完了")
+                    return True
+
+                self.logger.info(f"除去が終わってません。再試行")
+
+
+        # 別のページが開いてる
+        except TimeoutException:
+            self.errorPageDetect(
+                by=ErrorElement.ERROR_PAGE_BY.value,
+                value=ErrorElement.ERROR_CLICK_BY.value,
+                errorPageActionFunc=lambda: self.element.clickElement(
+                    by=ErrorElement.ERROR_CLICK_BY.value,
+                    value=ErrorElement.ERROR_CLICK_VALUE.value
+                )
+            )
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def errorPageDetect(self, by: str, value: str, errorMessage: str, errorPageActionFunc):
+        self.logger.warning(f"エラーページが表示されている可能性があります。")
+
+        errorElement = self.element.getElement(by=by, value=value)
+        if errorMessage in errorElement:
+            self.logger.warning(f"エラーページを検知しました。")
+
+            errorPageActionFunc()
 
 
 # ----------------------------------------------------------------------------------
@@ -550,7 +608,16 @@ class InsertSql:
     def _int_to_Str(self, strData: str):
         if '円' in strData:
             strData = strData.split('円')[0]
-        number = int(''.join(filter(str.isdigit, strData)))
+
+        # 数値になる文字列のみを残す
+        filteredStr = ''.join(filter(str.isdigit, strData))
+
+        # もし数値になる文字列がなかったら
+        if not filteredStr:
+            self.logger.error(f"数値ではない文字列を検知しました: {strData}")
+            return 0
+
+        number = int(filteredStr)
         self.logger.info(f"文字列から数値に変換: {number}")
         return number
 

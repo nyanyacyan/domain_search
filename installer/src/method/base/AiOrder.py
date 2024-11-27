@@ -118,6 +118,8 @@ class ChatGPTOrder:
         self.logger.debug(chatHistory)
         self.logger.debug(assistantMsg[10:])
         wordCount = len(assistantMsg)
+        self.logger.debug(assistantMsg)
+        self.logger.info(f"wordCount: {wordCount}\maxlen: {maxlen}")
 
         if wordCount > maxlen:
             newResult = await self.reRequest(fixedPrompt=fixedPrompt, beforeResult=result, endpointUrl=endpointUrl, model=model, apiKey=apiKey, maxTokens=maxTokens)
@@ -129,7 +131,7 @@ class ChatGPTOrder:
 # ----------------------------------------------------------------------------------
 
 
-    @decoInstance.characterLimitRetryAction(maxlen=5, maxCount=3 ,timeout=30, delay=2, notifyFunc=None)
+    @decoInstance.characterLimitRetryAction(maxlen=100, maxCount=3 ,timeout=30, delay=2, notifyFunc=None)
     async def reRequest(self, fixedPrompt :str, beforeResult: dict, endpointUrl: str, model: str, apiKey: str, maxTokens: int):
 
         assistantMsg = beforeResult['assistantMsg']

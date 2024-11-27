@@ -14,12 +14,13 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 
 
 # 自作モジュール
-from base.utils import Logger
-from base.insertSql import InsertSql
-from base.textManager import TextManager
-from constSqliteTable import TableSchemas
-from base.imageEditor import ImageEditor
-from base.fileWrite import FileWrite
+from ..base.utils import Logger
+from ..base.insertSql import InsertSql
+from ..base.textManager import TextManager
+from ..constSqliteTable import TableSchemas
+from ..base.imageEditor import ImageEditor
+from ..base.fileWrite import LimitSabDirFileWrite
+from ..base.popup import Popup
 
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -39,8 +40,9 @@ class DataFormatterToSql:
         self.insertSql = InsertSql(chrome=self.chrome, debugMode=debugMode)
         self.textManager = TextManager(debugMode=debugMode)
         self.imageEditor = ImageEditor(debugMode=debugMode)
-        self.fileWrite = FileWrite(debugMode=debugMode)
+        self.fileWrite = LimitSabDirFileWrite(debugMode=debugMode)
         self.currentDate = datetime.now().strftime('%y%m%d')
+        self.popup = Popup(debugMode=debugMode)
 
 # ----------------------------------------------------------------------------------
 # 各データをパターンごとにまとめる辞書
@@ -49,18 +51,28 @@ class DataFormatterToSql:
         self.logger.info(f"すべてのデータ数: {len(allDataDict)}")
         self.logger.debug(f"allDataDict: {allDataDict}")
 
+        count = 0
         adCommentList = []
         for key, valueDict in allDataDict.items():
             self.logger.warning(f"key: {key}\nvalueDict: {valueDict}")
             dataDict, name, ad = self.allDataCreate(dataDict=valueDict)
             self.imageEditor.executePatternEditors(dataDict=dataDict, buildingName=name)
 
-            # TODO adのリストを作成
+            # adのリストを作成
             adComment = f"{name} : {ad}"
             adCommentList.append(adComment)
+            count += 1
 
-        fileName = f"AD一覧テキスト"
-        self.fileWrite.writeToText(data=adCommentList, fileName=fileName)
+        dirName = f'AD一覧テキスト'
+        fileName = f"{dirName}_{self.currentDate}"
+        self.fileWrite.writeSabDirToText(data=adCommentList, subDirName=dirName, fileName=fileName)
+
+        self.chrome.close()
+
+        title = "物件情報抽出"
+        comment = f"すべての処理が完了しました。\n全 {count} 件数を実施"
+
+        self.popup.popupCommentOnly(popupTitle=title, comment=comment)
 
 
 # ----------------------------------------------------------------------------------
@@ -258,7 +270,16 @@ class DataFormatterToSql:
     def _int_to_Str(self, strData: str):
         if '円' in strData:
             strData = strData.split('円')[0]
-        number = int(''.join(filter(str.isdigit, strData)))
+
+        # 数値になる文字列のみを残す
+        filteredStr = ''.join(filter(str.isdigit, strData))
+
+        # もし数値になる文字列がなかったら
+        if not filteredStr:
+            self.logger.error(f"数値ではない文字列を検知しました: {strData}")
+            return 0
+
+        number = int(filteredStr)
         self.logger.info(f"文字列から数値に変換: {number}")
         return number
 

@@ -3,7 +3,7 @@
 # テストOK
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # import
-import sqlite3
+import os, sqlite3
 from typing import Any
 from pathlib import Path
 from datetime import datetime
@@ -16,8 +16,8 @@ from .utils import Logger
 from .path import BaseToPath
 from .errorHandlers import NetworkHandler
 from .decorators import Decorators
-from const import Extension
-from constSqliteTable import TableSchemas
+from ..const import Extension
+from ..constSqliteTable import TableSchemas
 
 decoInstance = Decorators(debugMode=True)
 
@@ -54,6 +54,7 @@ class SQLite:
         self.logger.warning(f"dbFilePath: {dbFilePath}")
         if dbFilePath.exists():
             self.logger.info(f"DBファイルが見つかりました: {dbFilePath}")
+            self.cleanWriteFiles(filePath=dbFilePath, extension=extension, keepWrites=5)
             return True
         else:
             self.logger.error(f"DBファイルはまだ作成されてません: {dbFilePath}")
@@ -61,7 +62,39 @@ class SQLite:
 
 
 # ----------------------------------------------------------------------------------
-# # ①
+
+
+    def cleanWriteFiles(self, filePath, extension: str, startIntNum: int = 6, keepWrites: int=3):
+        dirPath = os.path.dirname(filePath)
+        files = os.listdir(dirPath)
+
+        self.logger.warning(f"現在の {extension} ファイル数: {len(files)}個\n上限数: {keepWrites}")
+
+        # 6桁の数字をすべてリスト化する
+        upperLimit = int('1' + '0' * startIntNum)
+        validPrefixes = tuple(str(i).zfill(startIntNum) for i in range(upperLimit))
+        self.logger.warning(f"数字 {startIntNum} で始まるファイル数: {len(validPrefixes)}個\n上限数: {keepWrites}")
+
+        # 拡張子によってファイルを厳選
+        writeFiles = [
+            file for file in os.listdir(dirPath)
+            if file.startswith(validPrefixes) and file.endswith(extension)
+        ]
+        self.logger.info(f"writeFiles :{writeFiles}")
+
+        if len(writeFiles) > keepWrites:
+            sortWriteFiles = writeFiles.sort()
+            self.logger.debug(f"sortWriteFiles: {sortWriteFiles}")
+
+            oldFile = writeFiles[0]
+            fileToRemove = os.path.join(dirPath, oldFile)
+            if os.path.exists(fileToRemove):
+                os.remove(fileToRemove)
+                self.logger.info(f"{keepWrites}つ以上のファイルを検知: {oldFile} を削除")
+
+
+# ----------------------------------------------------------------------------------
+# ①
 
     def DBFullPath(self, extension: str = Extension.DB.value):
         dbDirPath = self.path.getResultDBDirPath()

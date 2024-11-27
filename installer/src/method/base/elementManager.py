@@ -3,14 +3,13 @@
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # import
-import time
 from selenium.webdriver.chrome.webdriver import WebDriver
 from datetime import datetime
 from typing import Dict, Any, List, Tuple
 
 # 自作モジュール
 from .utils import Logger
-from const import NGWordList, Address
+from ..const import NGWordList, Address
 from .decorators import Decorators
 from .textManager import TextManager
 from .driverDeco import ClickDeco
@@ -106,13 +105,13 @@ class ElementManager:
 
 
     @decoInstance.funcBase
-    def clickClearInput(self, by: str, value: str, inputText: str, delay: int = 2):
+    def clickClearInput(self, by: str, value: str, inputText: str):
+        self.clickWait.canWaitClick(chrome=self.chrome, by=by, value=value, timeout=3)
         element = self.getElement(by=by, value=value)
         element.click()
-        time.sleep(delay)
         element.clear()
-        time.sleep(delay)
         element.send_keys(inputText)
+        self.clickWait.jsPageChecker(chrome=self.chrome)
 
 
 # ----------------------------------------------------------------------------------
@@ -155,11 +154,21 @@ class ElementManager:
 
 
 # ----------------------------------------------------------------------------------
+# NGWordを除外リスト
 
-
-    def textCleaner(self, textList: List):
+    def textCleaner(self, textList: List, minLen: int = 12):
         ngWords = NGWordList.ngWords.value
         filterWordsList = self.textManager.filterWords(textList=textList, ngWords=ngWords)
+
+        self.logger.warning(f"filterWordsList: {filterWordsList}\ntextList: {textList}")
+        filterWordsListNum = len(filterWordsList)
+
+        print(f"filterWordsListNum: {filterWordsListNum}")
+        if minLen >= filterWordsListNum:
+            newTextList = textList.split('，')
+            print(f"newTextList: {newTextList}")
+            return newTextList
+
         return filterWordsList
 
 
