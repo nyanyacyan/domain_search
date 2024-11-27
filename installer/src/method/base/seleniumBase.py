@@ -8,27 +8,34 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 
 # 自作モジュール
 from .utils import Logger
+from .driverDeco import jsCompleteWaitDeco
 
+jsComplete= jsCompleteWaitDeco(debugMode=True)
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # **********************************************************************************
 
 
 class SeleniumBasicOperations:
-    def __init__(self, chrome: WebDriver, homeUrl: str, debugMode=True):
+    def __init__(self, chrome: WebDriver, debugMode=True):
         # logger
         self.getLogger = Logger(__name__, debugMode=debugMode)
         self.logger = self.getLogger.getLogger()
 
         self.chrome = chrome
-        self.homeUrl = homeUrl
+
+
+        self.jsComplete = jsCompleteWaitDeco(debugMode=debugMode)
+
 
 # ----------------------------------------------------------------------------------
 
 
-    def openSite(self):
-        self.logger.debug(f"url: {self.homeUrl}")
-        return self.chrome.get(url=self.homeUrl)
+    @jsComplete.jsCompleteWaitRetry
+    def openSite(self, url: str):
+        self.logger.debug(f"url: {url}")
+        return self.chrome.get(url)
+
 
 
 # ----------------------------------------------------------------------------------
@@ -48,11 +55,11 @@ class SeleniumBasicOperations:
 # ----------------------------------------------------------------------------------
 
 
-    def switchWindow(self):
+    def switchWindow(self, url: str):
         # 開いてるWindow数を確認
         if len(self.chrome.window_handles) > 1:
             self.chrome.switch_to.window(self.chrome.window_handles[1])
-            self.chrome.get(self.homeUrl)
+            self.chrome.get(url)
         else:
             self.logger.error("既存のWindowがないため、新しいWindowに切替ができません")
 
