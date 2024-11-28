@@ -12,7 +12,7 @@ from fpdf import FPDF
 
 # 自作モジュール
 from .utils import Logger
-from ..const import Extension
+from ..const_domain_search import Extension
 from .path import BaseToPath
 from .errorHandlers import FileWriteError
 from .decorators import Decorators
@@ -505,6 +505,7 @@ class PDFWhite(FPDF):
 
 # **********************************************************************************
 # ファイルに書き込みする基底クラス
+#! 書き込みするディレクトリのファイル数をマネージメントするクラス
 
 class LimitSabDirFileWrite:
     def __init__(self, debugMode=True):
@@ -571,3 +572,20 @@ class LimitSabDirFileWrite:
 
 
 # ----------------------------------------------------------------------------------
+# pickle
+#? picklesのディレクトリに入れたい場合にはoverrideさせていれる
+
+    @decoInstance.fileRetryAction(maxRetry=2, delay=2)
+    def writeSabDirToPickle(self, data: Any, subDirName: str, fileName: str, extension: str=Extension.pickle.value):
+        filePath = self.path.getResultSubDirFilePath(subDirName=subDirName, fileName=fileName, extension=extension)
+
+        if data and subDirName:
+            with open(filePath, 'wb') as file:
+                pickle.dump(data, file)
+
+            self._existsCheck(filePath=filePath)
+            self.cleanWriteFiles(filePath=filePath, extension=extension)
+
+
+# ----------------------------------------------------------------------------------
+# TODO　非同期処理クラスを作成する→pickleとテキスト

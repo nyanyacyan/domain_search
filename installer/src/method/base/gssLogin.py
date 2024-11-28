@@ -87,15 +87,16 @@ class GssLogin:
 
 
 # ----------------------------------------------------------------------------------
+# dfを辞書に直したリストデータにあるColumnからを特定行から値を抜き出す
 
-
-    def df_to_xpath_list(self, row: str, xpath_keys: List):
-        return [row[key] for key in xpath_keys]
+    def _get_row_value_list(self, row: str, key_list: List):
+        return [row[key] for key in key_list]
 
 
 # ----------------------------------------------------------------------------------
 
 
+    def 
 
 
 # ----------------------------------------------------------------------------------

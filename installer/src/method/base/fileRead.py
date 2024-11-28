@@ -12,7 +12,7 @@ from PIL import Image
 
 # 自作モジュール
 from .utils import Logger
-from ..const import Encoding
+from ..const_domain_search import Encoding
 from .path import BaseToPath
 from .decorators import Decorators
 
