@@ -80,20 +80,22 @@ class GssLogin:
 
 
 # ----------------------------------------------------------------------------------
-# DataFrameから名称をキーにしてurlを値にして辞書を作成
-
-    def _get_url_dict_to_df(self, key_col: str, vol_col: Any):
-        df = self._get_df_to_gss()
-        url_dict = df.set_index(key_col)[vol_col].to_dict
-        self.logger.info(f"url_dict: {url_dict}")
-        return url_dict
-
-
-# ----------------------------------------------------------------------------------
 # スプシのDataFrameを取得
 
     def _get_df_to_gss(self):
         return self.gss_read.load_spreadsheet()
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def df_to_xpath_list(self, row: str, xpath_keys: List):
+        return [row[key] for key in xpath_keys]
+
+
+# ----------------------------------------------------------------------------------
+
+
 
 
 # ----------------------------------------------------------------------------------
