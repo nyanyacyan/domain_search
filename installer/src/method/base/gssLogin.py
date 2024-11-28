@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 from .spreadsheetRead import SpreadsheetRead
 from .utils import Logger
 from .seleniumBase import SeleniumBasicOperations
-from ..const import GssColumnsName
+from ..const_domain_search import GssColumnsName
 
 
 ####################################################################################
