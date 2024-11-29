@@ -8,7 +8,7 @@ import os, json, yaml, cv2, zipfile, pickle
 import pandas as pd
 from PyPDF2 import PdfReader
 from PIL import Image
-
+import aiofiles
 
 # 自作モジュール
 from .utils import Logger
@@ -239,6 +239,33 @@ class InputDataFileRead:
         zipName = fileName.split('.')[0]
         with zipfile.ZipFile(getFullPath, 'r') as zip:
             zip.extractall(zipName)
+
+
+# ----------------------------------------------------------------------------------
+# **********************************************************************************
+
+
+class AsyncResultFileRead:
+    def __init__(self, debugMode=True):
+
+        # logger
+        self.getLogger = Logger(__name__, debugMode=debugMode)
+        self.logger = self.getLogger.getLogger()
+
+        # インスタンス
+        self.path = BaseToPath(debugMode=debugMode)
+
+
+# ----------------------------------------------------------------------------------
+# pickleの読込
+
+    async def asyncReadPickleLatestResult(self):
+        picklesPath = await self.path.getPickleDirPath()
+        latestPickleFilePath = await self.getLatestFolderPath(path=picklesPath)
+        async with aiofiles.open(latestPickleFilePath, 'rb') as file:
+            binary_data = await file.read()
+
+        return pickle.loads(binary_data)
 
 
 # ----------------------------------------------------------------------------------

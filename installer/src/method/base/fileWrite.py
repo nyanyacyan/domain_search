@@ -9,6 +9,8 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any
 from fpdf import FPDF
+import aiofiles
+
 
 # 自作モジュール
 from .utils import Logger
@@ -588,4 +590,91 @@ class LimitSabDirFileWrite:
 
 
 # ----------------------------------------------------------------------------------
-# TODO　非同期処理クラスを作成する→pickleとテキスト
+# **********************************************************************************
+# ファイルに書き込みする基底クラス
+#! 書き込みするディレクトリのファイル数をマネージメントするクラス
+
+class AsyncLimitSabDirFileWrite:
+    def __init__(self, debugMode=True):
+
+        # logger
+        self.getLogger = Logger(__name__, debugMode=debugMode)
+        self.logger = self.getLogger.getLogger()
+
+        # インスタンス
+        self.errorhandler = FileWriteError(debugMode=debugMode)
+        self.path = BaseToPath(debugMode=debugMode)
+        self.currentDate = datetime.now().strftime('%y%m%d')
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def _existsCheck(self, filePath: str):
+        if os.path.exists(filePath):
+            self.logger.info(f"【存在確認済】テキストファイル書き込み完了: {filePath}")
+        else:
+            self.logger.error(f"Fileの書込に失敗してます{__name__}, Path:{filePath}")
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def cleanWriteFiles(self, filePath, extension: str, keepWrites: int=3):
+        dirName = os.path.dirname(filePath)
+        validPrefixes = tuple(str(i).zfill(4) for i in range(10000))
+
+        writeFiles = [
+            file for file in os.listdir(dirName)
+            if file.startswith(validPrefixes) and file.endswith(extension)
+        ]
+
+        if len(writeFiles) > keepWrites:
+            writeFiles.sort()
+
+            oldFile = writeFiles[0]
+            fileToRemove = os.path.join(dirName, oldFile)
+            if os.path.exists(fileToRemove):
+                os.remove(fileToRemove)
+                self.logger.info(f"{keepWrites}つ以上のファイルを検知: {oldFile} を削除")
+
+
+# ----------------------------------------------------------------------------------
+# text
+
+    @decoInstance.fileRetryAction(maxRetry=2, delay=2)
+    async def asyncWriteSabDirToText(self, data: Any, subDirName:str, fileName: str, extension: str=Extension.text.value):
+        filePath = self.path.getResultSubDirFilePath(subDirName=subDirName, fileName=fileName, extension=extension)
+
+        # データがリストだった場合の処理
+        if isinstance(data, list):
+            data = '\n'.join(data)
+
+        if data and fileName:
+            async with aiofiles.open(filePath, 'w', encoding='utf-8') as file:
+                await file.write(data)
+
+            self._existsCheck(filePath=filePath)
+            self.cleanWriteFiles(filePath=filePath, extension=extension)
+
+
+# ----------------------------------------------------------------------------------
+# pickle
+#? picklesのディレクトリに入れたい場合にはoverrideさせていれる
+
+    @decoInstance.fileRetryAction(maxRetry=2, delay=2)
+    async def asyncWriteSabDirToPickle(self, data: Any, subDirName: str, fileName: str, extension: str=Extension.pickle.value):
+        filePath = self.path.getResultSubDirFilePath(subDirName=subDirName, fileName=fileName, extension=extension)
+
+        if data and subDirName:
+            async with aiofiles.open(filePath, 'wb') as file:
+                binary_data = pickle.dumps(data)
+                await file.write(binary_data)
+
+            self._existsCheck(filePath=filePath)
+            self.cleanWriteFiles(filePath=filePath, extension=extension)
+
+
+# ----------------------------------------------------------------------------------
+
+
