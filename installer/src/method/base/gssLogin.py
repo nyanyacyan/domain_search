@@ -39,27 +39,7 @@ class GssLogin:
 
 
     def flowProcess(self):
-        try:
-            self.logger.info(f"***** {self.account_id} process 開始 *****")
-
-            # スプシから情報を取得
-            brand_name = self.gss_read._sort_brand_name()
-            site_url = self.gss_read._sort_site_url()
-
-            self.logger.debug(f"brand_name: {brand_name}, site_url: {site_url} ")
-
-            time.sleep(2)
-
-            # サイトを開く
-            self.auto_login.open_site(site_url)
-            self.logger.debug(f"brand_name: {brand_name}, site_url: {site_url} ")
-
-
-            self.logger.info(f"***** {self.account_id} process 終了 *****")
-
-
-        except Exception as e:
-            self.logger.error(f"{self.account_id} process: 処理中にエラーが発生{e}")
+        pass
 
 
 # ----------------------------------------------------------------------------------
@@ -83,21 +63,16 @@ class GssLogin:
 # スプシのDataFrameを取得
 
     def _get_df_to_gss(self):
-        return self.gss_read.load_spreadsheet()
+        df = self.gss_read.load_spreadsheet()
+        return df
 
 
 # ----------------------------------------------------------------------------------
 # dfを辞書に直したリストデータにあるColumnからを特定行から値を抜き出す
+# Noneだった場合には除外
 
     def _get_row_value_list(self, row: str, key_list: List):
-        return [row[key] for key in key_list]
-
-
-# ----------------------------------------------------------------------------------
-
-
-    def 
-
+        value_list = [row[key] for key in key_list is not None]
+        return value_list
 
 # ----------------------------------------------------------------------------------
-

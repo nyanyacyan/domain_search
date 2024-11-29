@@ -30,7 +30,7 @@ class SubDir(Enum):
 
 class SiteUrl(Enum):
     LOGIN_URL='https://auth.es-account.com/u/login?state=hKFo2SB3QVZpdlM5eG9sR1JaTlVKTER3STFzZ1dkRWxOSmxmZ6Fur3VuaXZlcnNhbC1sb2dpbqN0aWTZIFVOMHBPX0F5eTFNdWRIdWVVNFVOOXgzX0RqbDBvSV9Po2NpZNkgYUlTZzRxQmxHWEpYZHpoZklSTnNwZFZMTkdtY3JsU2s'
-    HOME_URL=''
+    HOME_URL='https://www.xdomain.ne.jp/'
     TARGET_URL=''
 
     GSS_URL=''
@@ -39,9 +39,25 @@ class SiteUrl(Enum):
 # ----------------------------------------------------------------------------------
 
 
-class GssWSName(Enum):
-    SITE=''
-    DOMAIN=''
+class GssInfo(Enum):
+    SITE='https://docs.google.com/spreadsheets/d/1PJd_nTjYDh_jfxSJ4vNaQ13be90IHrBqVQ7srjPYu1A/export?format=csv&gid=0'
+
+    DOMAIN_COL=[
+        'domain_1',
+        'domain_2',
+        'domain_3',
+        'domain_4',
+        'domain_5',
+    ]
+
+
+    XPATH_COL=[
+        'xpath_1',
+        'xpath_2',
+        'xpath_3',
+        'xpath_4',
+        'xpath_5',
+    ]
 
 # ----------------------------------------------------------------------------------
 

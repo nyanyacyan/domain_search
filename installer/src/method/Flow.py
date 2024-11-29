@@ -1,49 +1,49 @@
 # coding: utf-8
-#* 流れ  【非同期処理して並列処理】検索ワードを含んだURLにて検索→サイトを開く→解析→ブランド名、商品名、価格のリスト作成→バイナリデータへ保存→保存されてるバイナリデータ（保存した過去データ）を復元→現在のデータと突き合わせる→今までと違うものをリスト化→通知する
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# import
+import os, time, asyncio
+
+# 自作モジュール
+from base.utils import Logger
+from base.pyppeteer import PyppeteerUtils
+from const_domain_search import SiteUrl
+
 # ----------------------------------------------------------------------------------
-import os, time
-
-
-from .base.utils import Logger
-
-
-# ----------------------------------------------------------------------------------
-####################################################################################
+# **********************************************************************************
 # 一連の流れ
 
 class Flow:
-    def __init__(self, sheet, debug_mode=False):
-        self.sheet = sheet
-        self.logger = self.setup_logger(debug_mode=debug_mode)
+    def __init__(self, debugMode=True):
+
+        # logger
+        self.getLogger = Logger(__name__, debugMode=debugMode)
+        self.logger = self.getLogger.getLogger()
+
+        # インスタンス
+        self.chrome = PyppeteerUtils(debugMode=debugMode)
+
+        # const
+        self.url_1 = SiteUrl.HOME_URL.value
+
+
 
 
 ####################################################################################
 # ----------------------------------------------------------------------------------
-
-# Loggerセットアップ
-
-    def setup_logger(self, debug_mode=False):
-        debug_mode = os.getenv('DEBUG_MODE', 'False') == 'True'
-        logger_instance = Logger(__name__, debug_mode=debug_mode)
-        return logger_instance.get_logger()
-
-
-# ----------------------------------------------------------------------------------
-# ここから処理を記載
-#! 処理を書く前に詳細設計をコメントに残すことから始める（TODOを使う）
-
-
-# ----------------------------------------------------------------------------------
 #todo 各メソッドをまとめる
 
-    def process(self, ):
-        self.logger.debug(f"***** Flow.process 開始 *****")
+    async def process(self):
+        page = await self.chrome.new_page()
+        await self.chrome.goto_page(page=page, url=self.url_1)
 
 
 
 
 
-        self.logger.debug(f"***** Flow.process 終了 *****")
+
+
 
 # ----------------------------------------------------------------------------------
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,4 +51,4 @@ class Flow:
 
 if __name__ == '__main__':
     test_flow = Flow()
-    test_flow.process()
+    asyncio.run(test_flow.process())

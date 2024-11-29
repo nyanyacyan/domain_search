@@ -12,7 +12,7 @@ import aiofiles
 
 # 自作モジュール
 from .utils import Logger
-from ..const_domain_search import Encoding
+from const_domain_search import Encoding
 from .path import BaseToPath
 from .decorators import Decorators
 
@@ -259,7 +259,7 @@ class AsyncResultFileRead:
 # ----------------------------------------------------------------------------------
 # pickleの読込
 
-    async def asyncReadPickleLatestResult(self):
+    async def asyncWriteSabDirToPickle(self):
         picklesPath = await self.path.getPickleDirPath()
         latestPickleFilePath = await self.getLatestFolderPath(path=picklesPath)
         async with aiofiles.open(latestPickleFilePath, 'rb') as file:

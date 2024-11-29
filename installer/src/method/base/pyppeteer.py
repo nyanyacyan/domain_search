@@ -12,9 +12,9 @@ from pyppeteer.page import Page
 
 # 自作モジュール
 from .utils import Logger
-from .fileWrite import LimitSabDirFileWrite
-from .fileRead import ResultFileRead
-from ..const_domain_search import SubDir
+from .fileWrite import AsyncLimitSabDirFileWrite
+from .fileRead import AsyncResultFileRead
+from const_domain_search import SubDir
 
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -30,8 +30,9 @@ class PyppeteerUtils:
         self.currentDate = datetime.now().strftime('%y%m%d')
 
         self.chrome = None
-        self.file_write = LimitSabDirFileWrite(debugMode=debugMode)
-        self.file_read = ResultFileRead(debugMode=debugMode)
+        self.file_write = AsyncLimitSabDirFileWrite(debugMode=debugMode)
+        self.file_read = AsyncResultFileRead(debugMode=debugMode)
+
 
 # ----------------------------------------------------------------------------------
 # Chromeブラウザの設定
@@ -39,19 +40,9 @@ class PyppeteerUtils:
     async def launch_chrome(self):
         self.chrome = await launch(
             headless=False,
-            defaultViewport={'width': 1200, 'height': 800},
             slowMo=50  # 各操作に指定したミリ秒の遅延を追加
         )
         return self.chrome
-
-
-
-# ----------------------------------------------------------------------------------
-# Chromeを閉じる
-
-    async def close_browser(self):
-        if self.chrome:
-            await self.chrome.close()
 
 
 # ----------------------------------------------------------------------------------
@@ -61,7 +52,8 @@ class PyppeteerUtils:
         # chromeが初期化状態だったら立ち上げる
         if not self.chrome:
             await self.launch_chrome()
-        page = await self.chrome.newPage()
+        pages = await self.chrome.pages()
+        page = pages[0]
         return page
 
 
@@ -71,7 +63,8 @@ class PyppeteerUtils:
     async def goto_page(self, page: Page, url: str, timeout: int = 10000):
         try:
             await page.goto(url, timeout=timeout, waitUntil='load')
-            self.logger.info(f"指定のURLへアクセス成功しました:\n{url}")
+            self.logger.info(f"指定のURLへアクセス:\n{url}")
+
 
         except TimeoutError:
             self.logger.error(f"タイムアウト: 指定のURLへアクセス失敗 {url}")
@@ -107,6 +100,7 @@ class PyppeteerUtils:
 
 # ----------------------------------------------------------------------------------
 # テキストの入力
+#? target_selectorは'css' or 'xpath'
 
     async def text_input(self, page: Page, target_selector: str, input_text: Any):
         try:
@@ -133,6 +127,14 @@ class PyppeteerUtils:
     async def new_tab_page(self):
         newPage = await self.chrome.newPage()
         return newPage
+
+
+# ----------------------------------------------------------------------------------
+# Chromeを閉じる
+
+    async def close_browser(self):
+        if self.chrome:
+            await self.chrome.close()
 
 
 # ----------------------------------------------------------------------------------
@@ -189,18 +191,17 @@ class PyppeteerUtils:
 
 
 # ----------------------------------------------------------------------------------
-# TODO　非同期処理にする
+
 
     def _pickle_write(self, data: Any, subDirName:str, fileName: str):
-        self.file_write.writeSabDirToPickle(data=data, subDirName=subDirName, fileName=fileName)
+        self.file_write.asyncWriteSabDirToPickle(data=data, subDirName=subDirName, fileName=fileName)
 
 
 # ----------------------------------------------------------------------------------
-# TODO　非同期処理にする
 
 
     def _pickle_read(self):
-        return self.file_read.readPickleLatestResult()
+        return self.file_read.asyncWriteSabDirToPickle()
 
 
 # ----------------------------------------------------------------------------------
