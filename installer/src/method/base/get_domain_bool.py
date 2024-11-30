@@ -5,9 +5,11 @@
 
 
 # ----------------------------------------------------------------------------------
-import time
+import os, time, asyncio
 import pandas as pd
 from typing import Any, Dict, List
+from dotenv import load_dotenv
+
 
 # 自作モジュール
 from .spreadsheetRead import SpreadsheetRead
@@ -19,6 +21,7 @@ from .path import BaseToPath
 
 from ..const_domain_search import GssInfo, Extension, SubDir, SendMessage
 
+load_dotenv()
 
 
 ####################################################################################
@@ -46,8 +49,42 @@ class GssLogin:
 # ----------------------------------------------------------------------------------
 
 
-    def flowProcess(self):
-        pass
+    async def flowProcess(self):
+        df = self._get_df_to_gss()
+
+        tasks = []
+        for row in df.iterrows():
+            tasks.append(self.row_process(row=row))
+
+        await asyncio.gather(*tasks)
+
+
+# ----------------------------------------------------------------------------------
+# 行の処理
+
+    async def row_process(self, row: pd.Series):
+        id = self._get_row_ID(row=row)
+        name = self._get_row_name(row=row)
+        url = self._get_row_url(row=row)
+        domain_list = self._get_row_value_list(row=row, key_list=GssInfo.DOMAIN_COL.value)
+        xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.XPATH_COL.value)
+        self.logger.debug(f"\ndomain_list: {domain_list}\nxpath_list: {xpath_list}")
+
+        search_input_element = xpath_list[0]
+        search_bar_element = xpath_list[1]
+        search_result = xpath_list[2]
+
+
+        for domain in domain_list:
+            await self.open_site(url=url)
+            await self._search_bar_input(by='xpath', value=search_input_element, input_text=domain)
+            await self._search_bar_click(by='xpath', value=search_bar_element)
+            if await self._search_result_bool(by='xpath', value=search_result):
+                photo_name = f"{name}_{domain}"
+                message = SendMessage.CHATWORK.value.format(siteName=name, domain=domain)
+                await self._exist_notify(photo_name=photo_name, message=message)
+            else:
+                self.logger.info(f"探しているドメインは {id} {name} サイトにはありませんでした: {domain}")
 
 
 # ----------------------------------------------------------------------------------
@@ -102,7 +139,7 @@ class GssLogin:
 # Noneだった場合には除外
 
     def _get_row_value_list(self, row: str, key_list: List):
-        value_list = [row[key] for key in key_list is not None]
+        value_list = [row[key] for key in key_list if row[key] is not None]
         return value_list
 
 
@@ -140,7 +177,7 @@ class GssLogin:
             subDirName=SubDir.SCREEN_SHOT.value,
             extension=Extension.PNG.value
         )
-        self.chrome.save_screenshot(photo_name)
+        self.chrome.save_screenshot(screenshot_path)
         return screenshot_path
 
 
@@ -151,8 +188,9 @@ class GssLogin:
         photo_path= self._screenshot(photo_name=photo_name)
 
         self.chatWork.chatwork_image_notify(
-            chatwork_roomid="",
-            chatwork_notify_token="",
+            chatwork_roomid=os.getenv('CHATWORK_ROOM_ID'),
+            chatwork_notify_token=os.getenv('CHATWORK_TOKEN'),
+            message=message,
             img_path=photo_path,
             resize_image_path=photo_path,
         )
@@ -160,30 +198,3 @@ class GssLogin:
 
 # ----------------------------------------------------------------------------------
 
-
-    def row_process(self, row: pd.Series):
-        id = self._get_row_ID(row=row)
-        name = self._get_row_name(row=row)
-        url = self._get_row_url(row=row)
-        domain_list = self._get_row_value_list(row=row, key_list=GssInfo.DOMAIN_COL.value)
-        xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.XPATH_COL.value)
-        self.logger.debug(f"\ndomain_list: {domain_list}\nxpath_list: {xpath_list}")
-
-        search_input_element = xpath_list[0]
-        search_bar_element = xpath_list[1]
-        search_result = xpath_list[2]
-
-
-        for domain in domain_list:
-            self.open_site(url=url)
-            self._search_bar_click(by='xpath', value=search_input_element, input_text=domain)
-            self._search_bar_click(by='xpath', value=search_bar_element)
-            if self._search_result_bool(by='xpath', value=search_result):
-                photo_name = f"{name}_{domain}"
-                message = SendMessage.CHATWORK.value.format(siteName=name, domain=domain)
-                self._exist_notify(photo_name=photo_name, message=message)
-            else:
-                self.logger.info(f"探しているドメインは {id} {name} サイトにはありませんでした: {domain}")
-
-
-# ----------------------------------------------------------------------------------
