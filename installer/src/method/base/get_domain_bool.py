@@ -56,6 +56,7 @@ class GssLogin:
         for row in df.iterrows():
             tasks.append(self.row_process(row=row))
 
+        self.logger.debug(f"tasks: {tasks}")
         await asyncio.gather(*tasks)
 
 
@@ -73,15 +74,19 @@ class GssLogin:
         search_input_element = xpath_list[0]
         search_bar_element = xpath_list[1]
         search_result = xpath_list[2]
+        self.logger.debug(f"\nsearch_input_element: {search_input_element}\nsearch_bar_element: {search_bar_element}\nsearch_result: {search_result}")
 
 
         for domain in domain_list:
+            self.logger.debug(f"\nurl: {url}\nid: {id}\nname: {name}\ndomain: {domain}")
             await self.open_site(url=url)
             await self._search_bar_input(by='xpath', value=search_input_element, input_text=domain)
             await self._search_bar_click(by='xpath', value=search_bar_element)
             if await self._search_result_bool(by='xpath', value=search_result):
                 photo_name = f"{name}_{domain}"
                 message = SendMessage.CHATWORK.value.format(siteName=name, domain=domain)
+                self.logger.debug(f"\nphoto_name: {photo_name}\nmessage: {message}")
+
                 await self._exist_notify(photo_name=photo_name, message=message)
             else:
                 self.logger.info(f"探しているドメインは {id} {name} サイトにはありませんでした: {domain}")
