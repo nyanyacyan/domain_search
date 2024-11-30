@@ -200,7 +200,18 @@ class BaseToPath:
 
 
 # ----------------------------------------------------------------------------------
-# resultOutput > 0101 > 0101.txt
+# resultOutput > 0101 > fileName.txt
+
+    def writeFileNamePath(self, subDirName: str, fileName: str, extension: str):
+        resultOutputPath = self.getResultOutputPath()
+        fileFullPath = resultOutputPath / subDirName / self.currentDate / f'{fileName}{extension}'
+        self.isDirExists(path=fileFullPath)
+        self.logger.debug(f"fileFullPath: {fileFullPath}")
+        return fileFullPath
+
+
+# ----------------------------------------------------------------------------------
+# resultOutput > 0101 > 0101.pkl
 
     def writePicklesFileDateNamePath(self, extension: str=Extension.pickle.value, subDirName: str=SubDir.pickles.value):
         resultOutputPath = self.getResultOutputPath()

@@ -6,7 +6,7 @@
 import time
 import os
 import requests
-from installer.src.method.const import EndPoint
+from ..const_domain_search import EndPoint
 from PIL import Image
 from dotenv import load_dotenv
 import aiofiles
@@ -165,8 +165,6 @@ class ChatworkNotify:
 
     def chatwork_notify(self, chatwork_roomid, chatwork_notify_token, message):
         try:
-            self.logger.info(f"********** chatwork_notify start **********")
-
             end_point = EndPoint.Chatwork.value
 
             url = end_point + '/rooms/' + str(chatwork_roomid) + '/messages'
@@ -209,14 +207,12 @@ class ChatworkNotify:
 
     def chatwork_image_notify(self, chatwork_roomid, chatwork_notify_token, message, img_path, resize_image_path):
         try:
-            self.logger.info(f"********** chatwork_image_notify start **********")
             end_point = EndPoint.Chatwork.value
 
             self.logger.debug(f"message: {message}")
             self.logger.debug(f"img_path: {img_path}")
 
             img = self._isChecked_image_size(img_path, resize_image_path=resize_image_path)
-
 
             url = end_point + '/rooms/' + str(chatwork_roomid) + '/files'
             headers = { 'X-ChatWorkToken': chatwork_notify_token}
@@ -226,7 +222,6 @@ class ChatworkNotify:
 
             with open(img, 'rb') as png_bin:
                 files = {'file': (img, png_bin, "image/png")}
-
                 data = {'message': message}
 
                 # chatworkに画像とメッセージを送る

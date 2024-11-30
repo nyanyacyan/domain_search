@@ -23,6 +23,7 @@ class SubDir(Enum):
     pickles='pickles'
     cookies='cookies'
     DBSubDir='DB'
+    SCREEN_SHOT='screenshot'
 
 
 # ----------------------------------------------------------------------------------
@@ -42,6 +43,12 @@ class SiteUrl(Enum):
 class GssInfo(Enum):
     SITE='https://docs.google.com/spreadsheets/d/1PJd_nTjYDh_jfxSJ4vNaQ13be90IHrBqVQ7srjPYu1A/export?format=csv&gid=0'
 
+    ID_COL='site_id'
+
+    NAME_COL='site_name'
+
+    URL_COL='site_url'
+
     DOMAIN_COL=[
         'domain_1',
         'domain_2',
@@ -52,12 +59,13 @@ class GssInfo(Enum):
 
 
     XPATH_COL=[
-        'xpath_1',
-        'xpath_2',
-        'xpath_3',
+        'search_input_xpath',
+        'search_click_xpath',
+        'result_xpath',
         'xpath_4',
         'xpath_5',
     ]
+
 
 # ----------------------------------------------------------------------------------
 
@@ -182,8 +190,13 @@ class EndPoint(Enum):
 # ----------------------------------------------------------------------------------
 
 
-class SnsKinds(Enum):
-    pass
+class SendMessage(Enum):
+    CHATWORK="""
+    **{siteName}** に **{domain}** があることを確認できました！
+
+    詳細はスクリーンショットにてご確認ください。
+    """
+
 
 
 

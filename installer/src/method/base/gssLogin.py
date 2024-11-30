@@ -13,7 +13,12 @@ from typing import Any, Dict, List
 from .spreadsheetRead import SpreadsheetRead
 from .utils import Logger
 from .seleniumBase import SeleniumBasicOperations
-from ..const_domain_search import GssColumnsName
+from .elementManager import ElementManager
+from .notify import ChatworkNotify
+from .path import BaseToPath
+
+from ..const_domain_search import GssInfo, Extension, SubDir, SendMessage
+
 
 
 ####################################################################################
@@ -33,6 +38,9 @@ class GssLogin:
         # インスタンス化
         self.gss_read = SpreadsheetRead(sheet_url=self.sheet_url, account_id=self.account_id, chrome=self.chrome, debugMode=debugMode)
         self.selenium = SeleniumBasicOperations(chrome=self.chrome, debugMode=debugMode)
+        self.element = ElementManager(chrome=self.chrome, debugMode=debugMode)
+        self.chatWork = ChatworkNotify(debugMode=debugMode)
+        self.path = BaseToPath(debugMode=debugMode)
 
 
 # ----------------------------------------------------------------------------------
@@ -68,11 +76,114 @@ class GssLogin:
 
 
 # ----------------------------------------------------------------------------------
+
+
+    def _get_row_ID(self, row: pd.Series):
+        url_col = GssInfo.ID_COL.value
+        return row[url_col]
+
+
+# ----------------------------------------------------------------------------------
+
+    def _get_row_name(self, row: pd.Series):
+        url_col = GssInfo.NAME_COL.value
+        return row[url_col]
+
+
+# ----------------------------------------------------------------------------------
+
+    def _get_row_url(self, row: pd.Series):
+        url_col = GssInfo.URL_COL.value
+        return row[url_col]
+
+
+# ----------------------------------------------------------------------------------
 # dfを辞書に直したリストデータにあるColumnからを特定行から値を抜き出す
 # Noneだった場合には除外
 
     def _get_row_value_list(self, row: str, key_list: List):
         value_list = [row[key] for key in key_list is not None]
         return value_list
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def _search_bar_input(self, by: str, value: str, input_text: str):
+        return self.element.clickClearInput(by=by, value=value, inputText=input_text)
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def _search_bar_click(self, by: str, value: str):
+        return self.element.clickElement(by=by, value=value)
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def _search_result_bool(self, by: str, value: str, true_element: str):
+        result_element = self.element.getElement(by=by, value=value)
+        if result_element == true_element:
+            return True
+        else:
+            return False
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def _screenshot(self, photo_name: str):
+        screenshot_path = self.path.writeFileNamePath(
+            fileName=photo_name,
+            subDirName=SubDir.SCREEN_SHOT.value,
+            extension=Extension.PNG.value
+        )
+        self.chrome.save_screenshot(photo_name)
+        return screenshot_path
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def _exist_notify(self, photo_name: str, message: str):
+        photo_path= self._screenshot(photo_name=photo_name)
+
+        self.chatWork.chatwork_image_notify(
+            chatwork_roomid="",
+            chatwork_notify_token="",
+            img_path=photo_path,
+            resize_image_path=photo_path,
+        )
+
+
+# ----------------------------------------------------------------------------------
+
+
+    def row_process(self, row: pd.Series):
+        id = self._get_row_ID(row=row)
+        name = self._get_row_name(row=row)
+        url = self._get_row_url(row=row)
+        domain_list = self._get_row_value_list(row=row, key_list=GssInfo.DOMAIN_COL.value)
+        xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.XPATH_COL.value)
+        self.logger.debug(f"\ndomain_list: {domain_list}\nxpath_list: {xpath_list}")
+
+        search_input_element = xpath_list[0]
+        search_bar_element = xpath_list[1]
+        search_result = xpath_list[2]
+
+
+        for domain in domain_list:
+            self.open_site(url=url)
+            self._search_bar_click(by='xpath', value=search_input_element, input_text=domain)
+            self._search_bar_click(by='xpath', value=search_bar_element)
+            if self._search_result_bool(by='xpath', value=search_result):
+                photo_name = f"{name}_{domain}"
+                message = SendMessage.CHATWORK.value.format(siteName=name, domain=domain)
+                self._exist_notify(photo_name=photo_name, message=message)
+            else:
+                self.logger.info(f"探しているドメインは {id} {name} サイトにはありませんでした: {domain}")
+
 
 # ----------------------------------------------------------------------------------
