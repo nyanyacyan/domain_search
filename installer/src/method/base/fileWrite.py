@@ -676,5 +676,52 @@ class AsyncLimitSabDirFileWrite:
 
 
 # ----------------------------------------------------------------------------------
+# ファイルに書き込みする基底クラス
+#! 書き込みするディレクトリのファイル数をマネージメントするクラス
+
+class AppendWrite:
+    def __init__(self, debugMode=True):
+
+        # logger
+        self.getLogger = Logger(__name__, debugMode=debugMode)
+        self.logger = self.getLogger.getLogger()
+
+        # インスタンス
+        self.errorhandler = FileWriteError(debugMode=debugMode)
+        self.path = BaseToPath(debugMode=debugMode)
+        self.currentDate = datetime.now().strftime('%y%m%d')
 
 
+# ----------------------------------------------------------------------------------
+
+
+    def _existsCheck(self, filePath: str):
+        if os.path.exists(filePath):
+            self.logger.info(f"【存在確認済】テキストファイルに追記の書き込み完了: {filePath}")
+        else:
+            self.logger.error(f"Fileの書込に失敗してます{__name__}, Path:{filePath}")
+
+
+# ----------------------------------------------------------------------------------
+# Result > 0101 > fileName.txt 追記モード
+
+    @decoInstance.fileRetryAction(maxRetry=2, delay=2)
+    def append_result_text(self, data: Any, subDirName: str, fileName: str, extension: str=Extension.text.value):
+        filePath = self.path.getResultSubDirFilePath(subDirName=subDirName, fileName=fileName, extension=extension)
+
+        # データがリストだった場合の処理
+        if isinstance(data, list):
+            data = '\n'.join(data)
+
+        if data and fileName:
+            with open(filePath, 'a', encoding='utf-8') as file:
+                file.write(data)
+
+            self._existsCheck(filePath=filePath)
+
+
+# ----------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------

@@ -8,7 +8,10 @@ import os, time, asyncio
 # 自作モジュール
 from base.utils import Logger
 from base.pyppeteer import PyppeteerUtils
-from const_domain_search import SiteUrl
+from const_domain_search import SiteUrl, GssInfo
+from .base.chrome import ChromeManager
+from .base.gss_to_notify import GssToNotify
+
 
 # ----------------------------------------------------------------------------------
 # **********************************************************************************
@@ -21,13 +24,17 @@ class Flow:
         self.getLogger = Logger(__name__, debugMode=debugMode)
         self.logger = self.getLogger.getLogger()
 
-        # インスタンス
-        self.chrome = PyppeteerUtils(debugMode=debugMode)
+        # chrome
+        self.chromeManager = ChromeManager(debugMode=debugMode)
+        self.chrome = self.chromeManager.flowSetupChrome()
 
         # const
         self.url_1 = SiteUrl.HOME_URL.value
+        self.sheet_url = GssInfo.SITE.value
 
 
+        # インスタンス
+        self.gss_to_notify = GssToNotify(sheet_url=self.sheet_url, chrome=self.chrome, debugMode=debugMode)
 
 
 ####################################################################################
@@ -35,8 +42,7 @@ class Flow:
 #todo 各メソッドをまとめる
 
     async def process(self):
-        page = await self.chrome.new_page()
-        await self.chrome.goto_page(page=page, url=self.url_1)
+        self.gss_to_notify.flowProcess()
 
 
 

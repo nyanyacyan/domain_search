@@ -24,6 +24,14 @@ class SubDir(Enum):
     cookies='cookies'
     DBSubDir='DB'
     SCREEN_SHOT='screenshot'
+    RESULT_SUMMARY='result_summary'
+
+
+# ----------------------------------------------------------------------------------
+
+
+class FileName(Enum):
+    RESULT_FILE='result_summary'
 
 
 # ----------------------------------------------------------------------------------
@@ -138,14 +146,6 @@ class ErrorMessage(Enum):
 
 class AccountId(Enum):
     pass
-
-
-# ----------------------------------------------------------------------------------
-# 各Fileの名称
-
-class FileName(Enum):
-    chromeOpIFrame='uBlock-Origin.crx'
-    chromeOpCaptcha='hlifkpholllijblknnmbfagnkjneagid.crx'
 
 
 # ----------------------------------------------------------------------------------

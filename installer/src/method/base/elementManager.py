@@ -4,12 +4,13 @@
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # import
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from datetime import datetime
 from typing import Dict, Any, List, Tuple
 
 # 自作モジュール
 from .utils import Logger
-from ..const import NGWordList, Address
+from ..const_domain_search import NGWordList, Address
 from .decorators import Decorators
 from .textManager import TextManager
 from .driverDeco import ClickDeco
@@ -38,7 +39,7 @@ class ElementManager:
 # ----------------------------------------------------------------------------------
 
 
-    def getElement(self, by, value):
+    def getElement(self, value: str, by: str = 'xpath'):
         if by == "id":
             return self.chrome.find_element_by_id(value)
         elif by == "css":
@@ -60,7 +61,7 @@ class ElementManager:
 # ----------------------------------------------------------------------------------
 # 複数
 
-    def getElements(self, by: str, value: str):
+    def getElements(self, value: str, by: str = 'xpath'):
         if by == "id":
             return self.chrome.find_elements_by_id(value)
         elif by == "css":
@@ -82,7 +83,7 @@ class ElementManager:
 # ----------------------------------------------------------------------------------
 # 要素を絞り込み
 
-    def filterElement(self, parentElement: str, by: str, value: str):
+    def filterElement(self, parentElement: str, value: str, by: str = 'xpath'):
         if by == "id":
             return parentElement.find_element_by_id(value)
         elif by == "css":
@@ -102,8 +103,26 @@ class ElementManager:
 
 
 # ----------------------------------------------------------------------------------
+# 親要素から絞り込んで要素を取得
+
+    def _get_sort_element(self, parent_path: str, child_path: str):
+        scope_element = self.getElement(value=parent_path)
+        child_element = self.filterElement(parentElement=scope_element, value=child_path)
+        self.logger.debug(f"\nscope_element: {scope_element}\nchild_element: {child_element}")
+        return child_element
 
 
+# ----------------------------------------------------------------------------------
+# 親要素から絞り込んだ要素からtextを取得
+
+    def _get_sort_element_text(self, parent_path: str, child_path: str):
+        scope_element = self._get_sort_element(parent_path=parent_path, child_path=child_path)
+        text = self._get_text(element=scope_element)
+        self.logger.debug(f"\nscope_element: {scope_element}\ntext: {text}")
+        return text
+
+
+# ----------------------------------------------------------------------------------
     @decoInstance.funcBase
     def clickClearInput(self, by: str, value: str, inputText: str):
         self.clickWait.canWaitClick(chrome=self.chrome, by=by, value=value, timeout=3)
@@ -126,12 +145,11 @@ class ElementManager:
 
 
 # ----------------------------------------------------------------------------------
-
+# 絞り込んだ要素にあるテキストを取得
 
     @decoInstance.funcBase
-    def getText(self, by: str, value: str):
-        element = self.getElement(by=by, value=value)
-        return element.text
+    def _get_text(self, element: WebElement):
+        return element.text.strip()  # 前後の余白を除去
 
 
 # ----------------------------------------------------------------------------------
