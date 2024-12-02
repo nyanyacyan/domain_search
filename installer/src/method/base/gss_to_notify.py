@@ -10,6 +10,7 @@ import pandas as pd
 from typing import Any, Dict, List
 from dotenv import load_dotenv
 from datetime import datetime
+from selenium.common.exceptions import NoSuchElementException
 
 
 # 自作モジュール
@@ -20,8 +21,10 @@ from .elementManager import ElementManager
 from .notify import ChatworkNotify
 from .path import BaseToPath
 from .fileWrite import AppendWrite
+from .driverDeco import ClickDeco
 
 from const_domain_search import GssInfo, Extension, SubDir, SendMessage, FileName
+from const_element_domain import OnamaeXpath
 
 load_dotenv()
 
@@ -47,6 +50,7 @@ class GssToNotify:
         self.path = BaseToPath(debugMode=debugMode)
         self.currentDate = datetime.now().strftime('%y%m%d_%H%M%S')
         self.append_write = AppendWrite(debugMode=debugMode)
+        self.can_wait = ClickDeco(debugMode=debugMode)
 
 # ----------------------------------------------------------------------------------
 
@@ -82,7 +86,7 @@ class GssToNotify:
 
 
         for domain in domain_list:
-            domain_extension = self._get_domain_tail(domain=domain)
+            domain_extension = self._get_domain_tail(site_name=site_name, domain=domain)
             self.logger.debug(f"\nurl: {url}\nid: {id}\nsite_name: {site_name}\ndomain: {domain}")
             await self.open_site(url=url)
             await self._search_bar_input(by='xpath', value=search_input_element, input_text=domain)
@@ -103,45 +107,62 @@ class GssToNotify:
 
     async def _search_result_bool(self, domain_extension: str, site_name: str, true_xpath_list: List, false_xpath_list: List, domain: str):
         subDirName = f"{site_name} 実施履歴"
+        # displayNoneを探して開く
+        self.element.unlockDisplayNone()
+
         # xpathのリストを渡してあるものをリスト化
-        true_elements = self._get_exists_elements(xpath_list=true_xpath_list, domain_extension=domain_extension)
-        false_elements = self._get_exists_elements(xpath_list=false_xpath_list, domain_extension=domain_extension)
+        true_elements = self._get_exists_elements(xpath_list=true_xpath_list, site_name=site_name, domain_extension=domain_extension)
+        false_elements = self._get_exists_elements(xpath_list=false_xpath_list, site_name=site_name, domain_extension=domain_extension)
 
         self.logger.debug(f"\ntrue_elements: {true_elements}\nfalse_elements: {false_elements}")
 
         if true_elements:
-            true_comment = f"{site_name} に {domain} にあることを検知しました\n{true_elements}"
+            true_comment = f"{self.currentDate}: {site_name} に {domain} にあることを検知しました\n\n"
             self.logger.debug(f'true_comment: {true_comment}')
             # 検知履歴に追記
             self.append_write.append_result_text(data=true_comment, subDirName=subDirName, fileName=FileName.TRUE_HISTORY.value)
             return True
 
         elif false_elements:
-            false_comment = f"{site_name} に {domain} はありません。\n{false_elements}\n"
+            false_comment = f"{self.currentDate}: {site_name} に {domain} はありません。\n\n"
             self.logger.debug(f'false_comment: {false_comment}')
             # 検知履歴に追記
             self.append_write.append_result_text(data=false_comment, subDirName=subDirName, fileName=FileName.FALSE_HISTORY.value)
             return False
 
         else:
-            none_comment = f"※確認必要\n{site_name} にある {domain} は通常とは違うステータスです\n（※サイト修正された可能性があります）: {self.currentDate}"
+            none_comment = f"{self.currentDate}: ※確認必要\n{site_name} にある {domain} は通常とは違うステータスです（※サイト修正された可能性があります）\n\n"
             self.append_write.append_result_text(data=none_comment, subDirName=subDirName, fileName=FileName.FALSE_HISTORY.value)
-            return True
+            return False
 
 
 
 # ----------------------------------------------------------------------------------
 # xpathのリストを渡してあるものをリスト化
 
-    def _get_exists_elements(self, xpath_list: List, domain_extension: str):
+    def _get_exists_elements(self, xpath_list: List, site_name: str, domain_extension: str, delay: int = 5):
         elements = []
-        for true_element_format in xpath_list:
+        for element_format in xpath_list:
             # スプシにあるxpathのFormatにdomain_tailを入れてPathにする
-            true_element_xpath = true_element_format.format(extension=domain_extension)
-            # 要素の検索
-            true_element = self.element.getElement(true_element_xpath)
-            if true_element:
-                elements.append(true_element)
+            element_xpath = element_format.format(extension=domain_extension)
+            self.logger.debug(f'element_xpath: {element_xpath}')
+
+            onamae_name= OnamaeXpath.SITE_NAME.value
+            self.logger.debug(f'\n site_name: {site_name}\n onamae_name: {onamae_name}')
+            if site_name == onamae_name:
+                # self.can_wait.canWaitClick(chrome=self.chrome, value=element_xpath)
+                time.sleep(delay)
+
+            try:
+                # 要素の検索
+                element = self.element.getElement(element_xpath)
+            except NoSuchElementException:
+                self.logger.warning(f'指定した要素はありませんでした: {element_xpath}')
+                continue
+
+            if element:
+                elements.append(element)
+        self.logger.debug(f'elements: {elements}')
         return elements
 
 
@@ -228,7 +249,7 @@ class GssToNotify:
 # ----------------------------------------------------------------------------------
 
 
-    def _exist_notify(self, photo_name: str, message: str):
+    async def _exist_notify(self, photo_name: str, message: str):
         photo_path= self._screenshot(photo_name=photo_name)
 
         self.chatWork.chatwork_image_notify(
@@ -250,18 +271,6 @@ class GssToNotify:
 
 
 # ----------------------------------------------------------------------------------
-# const_formatに代入してxpathを完成させる
-
-    def _domain_xpath_form(self, domain: str, result_xpath: str):
-        domain_split = domain.split('.')
-        domain_extension = domain_split[1]
-
-        element_xpath = result_xpath.format(domain_extension=domain_extension)
-        self.logger.debug(f"\ndomain_extension: {domain_extension}\nelement_xpath: {element_xpath}")
-        return element_xpath
-
-
-# ----------------------------------------------------------------------------------
 
 
     def _get_domain_name(self, domain: str):
@@ -274,10 +283,19 @@ class GssToNotify:
 
 # ----------------------------------------------------------------------------------
 
-    def _get_domain_tail(self, domain: str):
+    def _get_domain_tail(self, site_name: str, domain: str):
+
         # 取得した要素をテキスト化してリストにする
         domain_split = domain.split('.')
         extension = domain_split[1]
+        onamae_name = OnamaeXpath.SITE_NAME.value
+        self.logger.debug(f'\n site_name: {site_name}\n onamae_name: {onamae_name}')
+
+        # お名前ドットコムのみだけドットなし
+        if site_name == onamae_name:
+            self.logger.debug(f'お名前ドットコムのドメイン: {extension}')
+            return extension
+
         domain_extension = f".{extension}"
         self.logger.debug(f"domain_extension: {domain_extension}")
         return domain_extension

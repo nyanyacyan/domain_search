@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from datetime import datetime
 from typing import Dict, Any, List, Tuple
+from selenium.common.exceptions import ElementClickInterceptedException
 
 # 自作モジュール
 from .utils import Logger
@@ -40,6 +41,7 @@ class ElementManager:
 
 
     def getElement(self, value: str, by: str = 'xpath'):
+        self.clickWait.jsPageChecker(chrome=self.chrome)
         if by == "id":
             return self.chrome.find_element_by_id(value)
         elif by == "css":
@@ -62,6 +64,7 @@ class ElementManager:
 # 複数
 
     def getElements(self, value: str, by: str = 'xpath'):
+        self.clickWait.jsPageChecker(chrome=self.chrome)
         if by == "id":
             return self.chrome.find_elements_by_id(value)
         elif by == "css":
@@ -84,6 +87,8 @@ class ElementManager:
 # 要素を絞り込み
 
     def filterElement(self, parentElement: str, value: str, by: str = 'xpath'):
+        self.clickWait.jsPageChecker(chrome=self.chrome)
+
         if by == "id":
             return parentElement.find_element_by_id(value)
         elif by == "css":
@@ -127,10 +132,17 @@ class ElementManager:
     def clickClearInput(self, by: str, value: str, inputText: str):
         self.clickWait.canWaitClick(chrome=self.chrome, by=by, value=value, timeout=3)
         element = self.getElement(by=by, value=value)
-        element.click()
+        try:
+            element.click()
+        except ElementClickInterceptedException:
+            self.logger.debug(f'popupなどでClickができません: {element}')
+            self.chrome.execute_script("arguments[0].click();", element)
+
         element.clear()
         element.send_keys(inputText)
         self.clickWait.jsPageChecker(chrome=self.chrome)
+
+
 
 
 # ----------------------------------------------------------------------------------
@@ -139,7 +151,12 @@ class ElementManager:
     def clickElement(self, by: str, value: str):
         self.clickWait.canWaitClick(chrome=self.chrome, by=by, value=value, timeout=3)
         element = self.getElement(by=by, value=value)
-        element.click()
+        try:
+            element.click()
+        except ElementClickInterceptedException:
+            self.logger.debug(f'popupなどでClickができません: {element}')
+            self.chrome.execute_script("arguments[0].click();", element)
+
         self.clickWait.jsPageChecker(chrome=self.chrome)
         return
 

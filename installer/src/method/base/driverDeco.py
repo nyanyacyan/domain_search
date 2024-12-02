@@ -217,7 +217,7 @@ class ClickDeco:
 # ----------------------------------------------------------------------------------
 # クリックができるまで待機
 
-    def canWaitClick(self, chrome: WebDriver, by: str, value: str, timeout: int = 10):
+    def canWaitClick(self, chrome: WebDriver, value: str, by: str = 'xpath', timeout: int = 10):
         if WebDriverWait(chrome, timeout).until(EC.element_to_be_clickable((by, value))):
             self.logger.info(f"{__name__} Clickできる状態になってます")
 
