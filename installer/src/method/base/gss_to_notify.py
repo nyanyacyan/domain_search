@@ -21,8 +21,8 @@ from .notify import ChatworkNotify
 from .path import BaseToPath
 from .fileWrite import AppendWrite
 
-from ..const_domain_search import GssInfo, Extension, SubDir, SendMessage, FileName
-from ..const_element_domain import XserverXpath, ConohaWingXpath, OnamaeXpath, BoolTextList, 
+from const_domain_search import GssInfo, Extension, SubDir, SendMessage, FileName
+
 load_dotenv()
 
 
@@ -31,16 +31,16 @@ load_dotenv()
 
 
 class GssToNotify:
-    def __init__(self, sheet_url, chrome, debugMode=True) -> None:
+    def __init__(self, gss_url, chrome, debugMode=True) -> None:
         # logger
         self.getLogger = Logger(__name__, debugMode=debugMode)
         self.logger = self.getLogger.getLogger()
 
-        self.sheet_url = sheet_url
+        self.gss_url = gss_url
         self.chrome = chrome
 
         # インスタンス化
-        self.gss_read = GSSReadNoID(sheet_url=self.sheet_url, chrome=self.chrome, debugMode=debugMode)
+        self.gss_read = GSSReadNoID(gss_url=self.gss_url, debugMode=debugMode)
         self.selenium = SeleniumBasicOperations(chrome=self.chrome, debugMode=debugMode)
         self.element = ElementManager(chrome=self.chrome, debugMode=debugMode)
         self.chatWork = ChatworkNotify(debugMode=debugMode)
@@ -78,17 +78,18 @@ class GssToNotify:
 
         search_input_element = search_xpath_list[0]
         search_bar_element = search_xpath_list[1]
-        self.logger.debug(f"\nsearch_input_element: {search_input_element}\nsearch_bar_element: {search_bar_element}\nsearch_result: {search_result}")
+        self.logger.debug(f"\nsearch_input_element: {search_input_element}\nsearch_bar_element: {search_bar_element}")
 
 
         for domain in domain_list:
-            domain_extension = await self._get_domain_tail(domain=domain)
+            domain_extension = self._get_domain_tail(domain=domain)
             self.logger.debug(f"\nurl: {url}\nid: {id}\nsite_name: {site_name}\ndomain: {domain}")
             await self.open_site(url=url)
             await self._search_bar_input(by='xpath', value=search_input_element, input_text=domain)
             await self._search_bar_click(by='xpath', value=search_bar_element)
-            if await self._search_result_bool(domain_extension=domain_extension, true_xpath_list=true_xpath_list, false_xpath_list=false_xpath_list, domain=domain):
-                photo_name = f"{site_name}_{domain}"
+            if await self._search_result_bool(domain_extension=domain_extension, site_name=site_name, true_xpath_list=true_xpath_list, false_xpath_list=false_xpath_list, domain=domain):
+                domain_name = self._get_domain_name(domain=domain)
+                photo_name = f"{site_name}_{domain_name}"
                 message = SendMessage.CHATWORK.value.format(siteName=site_name, domain=domain)
                 self.logger.debug(f"\nphoto_name: {photo_name}\nmessage: {message}")
 
@@ -100,7 +101,8 @@ class GssToNotify:
 # ----------------------------------------------------------------------------------
 # 正と負、それぞれの要素をのワードを検知して真偽値を返す
 
-    def _search_result_bool(self, domain_extension: str, site_name: str, true_xpath_list: List, false_xpath_list: List, domain: str):
+    async def _search_result_bool(self, domain_extension: str, site_name: str, true_xpath_list: List, false_xpath_list: List, domain: str):
+        subDirName = f"{site_name} 実施履歴"
         # xpathのリストを渡してあるものをリスト化
         true_elements = self._get_exists_elements(xpath_list=true_xpath_list, domain_extension=domain_extension)
         false_elements = self._get_exists_elements(xpath_list=false_xpath_list, domain_extension=domain_extension)
@@ -111,18 +113,19 @@ class GssToNotify:
             true_comment = f"{site_name} に {domain} にあることを検知しました\n{true_elements}"
             self.logger.debug(f'true_comment: {true_comment}')
             # 検知履歴に追記
-            self.append_write.append_result_text(data=true_comment, subDirName=site_name, fileName=FileName.TRUE_HISTORY.value)
+            self.append_write.append_result_text(data=true_comment, subDirName=subDirName, fileName=FileName.TRUE_HISTORY.value)
             return True
 
         elif false_elements:
-            false_comment = self.logger.info(f"{site_name} に {domain} はありません。\n{false_elements}\n")
+            false_comment = f"{site_name} に {domain} はありません。\n{false_elements}\n"
+            self.logger.debug(f'false_comment: {false_comment}')
             # 検知履歴に追記
-            self.append_write.append_result_text(data=false_comment, subDirName=site_name, fileName=FileName.FALSE_HISTORY.value)
+            self.append_write.append_result_text(data=false_comment, subDirName=subDirName, fileName=FileName.FALSE_HISTORY.value)
             return False
 
         else:
             none_comment = f"※確認必要\n{site_name} にある {domain} は通常とは違うステータスです\n（※サイト修正された可能性があります）: {self.currentDate}"
-            self.append_write.append_result_text(data=none_comment, subDirName=site_name, fileName=FileName.FALSE_HISTORY.value)
+            self.append_write.append_result_text(data=none_comment, subDirName=subDirName, fileName=FileName.FALSE_HISTORY.value)
             return True
 
 
@@ -145,7 +148,7 @@ class GssToNotify:
 # ----------------------------------------------------------------------------------
 # サイトを開く（jsWaitあり）
 
-    def open_site(self, url: str):
+    async def open_site(self, url: str):
         return self.selenium.openSite(url=url)
 
 
@@ -196,21 +199,21 @@ class GssToNotify:
 # Noneだった場合には除外
 
     def _get_row_value_list(self, row: pd.Series, key_list: List):
-        value_list = [row[key] for key in key_list if row[key] is not None]
+        value_list = [row[key] for key in key_list if pd.notna(row[key])]
         return value_list
 
 
 # ----------------------------------------------------------------------------------
 
 
-    def _search_bar_input(self, by: str, value: str, input_text: str):
+    async def _search_bar_input(self, by: str, value: str, input_text: str):
         return self.element.clickClearInput(by=by, value=value, inputText=input_text)
 
 
 # ----------------------------------------------------------------------------------
 
 
-    def _search_bar_click(self, by: str, value: str):
+    async def _search_bar_click(self, by: str, value: str):
         return self.element.clickElement(by=by, value=value)
 
 
@@ -233,7 +236,6 @@ class GssToNotify:
             chatwork_notify_token=os.getenv('CHATWORK_TOKEN'),
             message=message,
             img_path=photo_path,
-            resize_image_path=photo_path,
         )
 
 
@@ -261,6 +263,16 @@ class GssToNotify:
 
 # ----------------------------------------------------------------------------------
 
+
+    def _get_domain_name(self, domain: str):
+        # 取得した要素をテキスト化してリストにする
+        domain_split = domain.split('.')
+        domain_name = domain_split[0]
+        self.logger.debug(f"domain_name: {domain_name}")
+        return domain_name
+
+
+# ----------------------------------------------------------------------------------
 
     def _get_domain_tail(self, domain: str):
         # 取得した要素をテキスト化してリストにする

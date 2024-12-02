@@ -1,5 +1,7 @@
 # coding: utf-8
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# export PYTHONPATH="/Users/nyanyacyan/Desktop/project_file/domain_search/installer/src"
+
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # import
@@ -9,8 +11,8 @@ import os, time, asyncio
 from base.utils import Logger
 from base.pyppeteer import PyppeteerUtils
 from const_domain_search import SiteUrl, GssInfo
-from .base.chrome import ChromeManager
-from .base.gss_to_notify import GssToNotify
+from base.chrome import ChromeManager
+from base.gss_to_notify import GssToNotify
 
 
 # ----------------------------------------------------------------------------------
@@ -30,11 +32,11 @@ class Flow:
 
         # const
         self.url_1 = SiteUrl.HOME_URL.value
-        self.sheet_url = GssInfo.SITE.value
+        self.gss_url = GssInfo.SITE.value
 
 
         # インスタンス
-        self.gss_to_notify = GssToNotify(sheet_url=self.sheet_url, chrome=self.chrome, debugMode=debugMode)
+        self.gss_to_notify = GssToNotify(gss_url=self.gss_url, chrome=self.chrome, debugMode=debugMode)
 
 
 ####################################################################################
@@ -42,7 +44,7 @@ class Flow:
 #todo 各メソッドをまとめる
 
     async def process(self):
-        self.gss_to_notify.flowProcess()
+        await self.gss_to_notify.flowProcess()
 
 
 

@@ -1,10 +1,12 @@
 # coding: utf-8
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# export PYTHONPATH="/Users/nyanyacyan/Desktop/project_file/domain_search/installer/src"
+
+
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # import
 import os
-from typing import Path
 from selenium.webdriver.chrome.webdriver import WebDriver
 from datetime import datetime
 
@@ -14,7 +16,7 @@ from .utils import Logger
 from .driverDeco import jsCompleteWaitDeco
 from .path import BaseToPath
 
-from ..const_domain_search import SubDir, Extension
+from const_domain_search import SubDir, Extension
 
 jsComplete= jsCompleteWaitDeco(debugMode=True)
 
@@ -40,7 +42,7 @@ class SeleniumBasicOperations:
 # ----------------------------------------------------------------------------------
 
 
-    @jsComplete.jsCompleteWaitRetry
+    # @jsComplete.jsCompleteWaitRetry
     def openSite(self, url: str):
         self.logger.debug(f"url: {url}")
         return self.chrome.get(url)
@@ -79,7 +81,7 @@ class SeleniumBasicOperations:
     def screenshot_limit(self, photo_name: str):
         extension = Extension.PNG.value
         full_path = self.path.getResultSubDirDateFilePath(fileName=photo_name, subDirName=SubDir.SCREEN_SHOT.value, extension=extension)
-        self.chrome.save_screenshot(full_path)
+        self.chrome.save_screenshot(str(full_path))
         self.logger.debug(f'full_path: {full_path}')
 
         self._existsCheck(filePath=full_path)
@@ -100,7 +102,7 @@ class SeleniumBasicOperations:
 # ----------------------------------------------------------------------------------
 # 対象フォルダに指定数より多かったら削除
 
-    def cleanWriteFiles(self, filePath: Path, extension: str, keepWrites: int=3):
+    def cleanWriteFiles(self, filePath: str, extension: str, keepWrites: int=3):
         dirName = os.path.dirname(filePath)
 
         # 指定する拡張子が同じファイルのフルパスをリスト化
