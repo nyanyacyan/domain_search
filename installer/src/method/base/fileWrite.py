@@ -610,15 +610,6 @@ class AsyncLimitSabDirFileWrite:
 # ----------------------------------------------------------------------------------
 
 
-    def _existsCheck(self, filePath: str):
-        if os.path.exists(filePath):
-            self.logger.info(f"【存在確認済】テキストファイル書き込み完了: {filePath}")
-        else:
-            self.logger.error(f"Fileの書込に失敗してます{__name__}, Path:{filePath}")
-
-
-# ----------------------------------------------------------------------------------
-
 
     def cleanWriteFiles(self, filePath, extension: str, keepWrites: int=3):
         dirName = os.path.dirname(filePath)

@@ -13,7 +13,7 @@ from datetime import datetime
 
 
 # 自作モジュール
-from .spreadsheetRead import SpreadsheetRead
+from .spreadsheetRead import GSSReadNoID
 from .utils import Logger
 from .seleniumBase import SeleniumBasicOperations
 from .elementManager import ElementManager
@@ -22,7 +22,7 @@ from .path import BaseToPath
 from .fileWrite import AppendWrite
 
 from ..const_domain_search import GssInfo, Extension, SubDir, SendMessage, FileName
-from ..const_element_domain import OnamaeXpath, BoolTextList
+from ..const_element_domain import XserverXpath, ConohaWingXpath, OnamaeXpath, BoolTextList, 
 load_dotenv()
 
 
@@ -32,8 +32,7 @@ load_dotenv()
 
 class GssToNotify:
     def __init__(self, sheet_url, chrome, debugMode=True) -> None:
-        self.chrome = chrome
-
+        # logger
         self.getLogger = Logger(__name__, debugMode=debugMode)
         self.logger = self.getLogger.getLogger()
 
@@ -41,7 +40,7 @@ class GssToNotify:
         self.chrome = chrome
 
         # インスタンス化
-        self.gss_read = SpreadsheetRead(sheet_url=self.sheet_url, account_id=self.account_id, chrome=self.chrome, debugMode=debugMode)
+        self.gss_read = GSSReadNoID(sheet_url=self.sheet_url, chrome=self.chrome, debugMode=debugMode)
         self.selenium = SeleniumBasicOperations(chrome=self.chrome, debugMode=debugMode)
         self.element = ElementManager(chrome=self.chrome, debugMode=debugMode)
         self.chatWork = ChatworkNotify(debugMode=debugMode)
@@ -56,8 +55,9 @@ class GssToNotify:
         df = self._get_df_to_gss()
 
         tasks = []
-        for row in df.iterrows():
+        for index, row in df.iterrows():
             tasks.append(self.row_process(row=row))
+            self.logger.debug(f'{index} 個目のtaskを追加')
 
         self.logger.debug(f"tasks: {tasks}")
         await asyncio.gather(*tasks)
@@ -71,23 +71,23 @@ class GssToNotify:
         site_name = self._get_row_name(row=row)
         url = self._get_row_url(row=row)
         domain_list = self._get_row_value_list(row=row, key_list=GssInfo.DOMAIN_COL.value)
-        xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.XPATH_COL.value)
-        self.logger.debug(f"\ndomain_list: {domain_list}\nxpath_list: {xpath_list}")
+        search_xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.SEARCH_XPATH_COL.value)
+        true_xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.TRUE_XPATH.value)
+        false_xpath_list = self._get_row_value_list(row=row, key_list=GssInfo.FALSE_XPATH.value)
+        self.logger.debug(f"\ndomain_list: {domain_list}\nsearch_xpath_list: {search_xpath_list}\ntrue_xpath_list: {true_xpath_list}\nfalse_xpath_list: {false_xpath_list}")
 
-        search_input_element = xpath_list[0]
-        search_bar_element = xpath_list[1]
-        search_result = xpath_list[2]
-        result_sub_dir_name = SubDir.RESULT_SUMMARY.value
-        result_file_name = FileName.RESULT_FILE.value
+        search_input_element = search_xpath_list[0]
+        search_bar_element = search_xpath_list[1]
         self.logger.debug(f"\nsearch_input_element: {search_input_element}\nsearch_bar_element: {search_bar_element}\nsearch_result: {search_result}")
 
 
         for domain in domain_list:
+            domain_extension = await self._get_domain_tail(domain=domain)
             self.logger.debug(f"\nurl: {url}\nid: {id}\nsite_name: {site_name}\ndomain: {domain}")
             await self.open_site(url=url)
             await self._search_bar_input(by='xpath', value=search_input_element, input_text=domain)
             await self._search_bar_click(by='xpath', value=search_bar_element)
-            if await self._search_result_bool(by='xpath', value=search_result, domain=domain, subDirName=result_sub_dir_name, fileName=result_file_name):
+            if await self._search_result_bool(domain_extension=domain_extension, true_xpath_list=true_xpath_list, false_xpath_list=false_xpath_list, domain=domain):
                 photo_name = f"{site_name}_{domain}"
                 message = SendMessage.CHATWORK.value.format(siteName=site_name, domain=domain)
                 self.logger.debug(f"\nphoto_name: {photo_name}\nmessage: {message}")
@@ -95,6 +95,51 @@ class GssToNotify:
                 await self._exist_notify(photo_name=photo_name, message=message)
             else:
                 self.logger.info(f"探しているドメインは {id} {site_name} サイトにはありませんでした: {domain}")
+
+
+# ----------------------------------------------------------------------------------
+# 正と負、それぞれの要素をのワードを検知して真偽値を返す
+
+    def _search_result_bool(self, domain_extension: str, site_name: str, true_xpath_list: List, false_xpath_list: List, domain: str):
+        # xpathのリストを渡してあるものをリスト化
+        true_elements = self._get_exists_elements(xpath_list=true_xpath_list, domain_extension=domain_extension)
+        false_elements = self._get_exists_elements(xpath_list=false_xpath_list, domain_extension=domain_extension)
+
+        self.logger.debug(f"\ntrue_elements: {true_elements}\nfalse_elements: {false_elements}")
+
+        if true_elements:
+            true_comment = f"{site_name} に {domain} にあることを検知しました\n{true_elements}"
+            self.logger.debug(f'true_comment: {true_comment}')
+            # 検知履歴に追記
+            self.append_write.append_result_text(data=true_comment, subDirName=site_name, fileName=FileName.TRUE_HISTORY.value)
+            return True
+
+        elif false_elements:
+            false_comment = self.logger.info(f"{site_name} に {domain} はありません。\n{false_elements}\n")
+            # 検知履歴に追記
+            self.append_write.append_result_text(data=false_comment, subDirName=site_name, fileName=FileName.FALSE_HISTORY.value)
+            return False
+
+        else:
+            none_comment = f"※確認必要\n{site_name} にある {domain} は通常とは違うステータスです\n（※サイト修正された可能性があります）: {self.currentDate}"
+            self.append_write.append_result_text(data=none_comment, subDirName=site_name, fileName=FileName.FALSE_HISTORY.value)
+            return True
+
+
+
+# ----------------------------------------------------------------------------------
+# xpathのリストを渡してあるものをリスト化
+
+    def _get_exists_elements(self, xpath_list: List, domain_extension: str):
+        elements = []
+        for true_element_format in xpath_list:
+            # スプシにあるxpathのFormatにdomain_tailを入れてPathにする
+            true_element_xpath = true_element_format.format(extension=domain_extension)
+            # 要素の検索
+            true_element = self.element.getElement(true_element_xpath)
+            if true_element:
+                elements.append(true_element)
+        return elements
 
 
 # ----------------------------------------------------------------------------------
@@ -118,7 +163,7 @@ class GssToNotify:
 # スプシのDataFrameを取得
 
     def _get_df_to_gss(self):
-        df = self.gss_read.load_spreadsheet()
+        df = self.gss_read.spreadsheet_to_df()
         return df
 
 
@@ -150,7 +195,7 @@ class GssToNotify:
 # dfを辞書に直したリストデータにあるColumnからを特定行から値を抜き出す
 # Noneだった場合には除外
 
-    def _get_row_value_list(self, row: str, key_list: List):
+    def _get_row_value_list(self, row: pd.Series, key_list: List):
         value_list = [row[key] for key in key_list if row[key] is not None]
         return value_list
 
@@ -174,13 +219,7 @@ class GssToNotify:
 
 
     def _screenshot(self, photo_name: str):
-        screenshot_path = self.path.writeFileNamePath(
-            fileName=photo_name,
-            subDirName=SubDir.SCREEN_SHOT.value,
-            extension=Extension.PNG.value
-        )
-        self.chrome.save_screenshot(screenshot_path)
-        return screenshot_path
+        return self.selenium.screenshot_limit(photo_name=photo_name)
 
 
 # ----------------------------------------------------------------------------------
@@ -223,38 +262,14 @@ class GssToNotify:
 # ----------------------------------------------------------------------------------
 
 
-    def _site_name_branch(self, site_name: str, domain: str, result_xpath_format: str, child_path: str, true_text_list: List, false_text_list: List, subDirName: str, fileName: str):
-        # フォーマットにdomainの詳細を入れ込んでpathを形成する
-        result_xpath = self._domain_xpath_form(domain=domain, result_xpath=result_xpath_format)
-
-        # 絞り込んで判定部分のtextを出力
-        # お名前ドットコム
-        if site_name == OnamaeXpath.SITE_NAME.value:
-            result_text = self.element._get_sort_element_text(parent_path=result_xpath, child_path=child_path)
-
+    def _get_domain_tail(self, domain: str):
+        # 取得した要素をテキスト化してリストにする
+        domain_split = domain.split('.')
+        extension = domain_split[1]
+        domain_extension = f".{extension}"
+        self.logger.debug(f"domain_extension: {domain_extension}")
+        return domain_extension
 
 
 # ----------------------------------------------------------------------------------
-# 正と負それぞれのワードを検知して真偽値を返す
 
-    def _search_result_bool(self, site_name: str, result_text: str, domain: str, true_text_list: List, false_text_list: List, subDirName: str, fileName: str):
-        for false_text in false_text_list:
-            if result_text == false_text:
-                none_comment = f"{domain} は {site_name} にはありません\nFalse_text: {false_text} を検知。{self.currentDate} "
-                self.logger.warning(none_comment)
-                self.append_write.append_result_text(data=none_comment, subDirName=subDirName, fileName=fileName)
-                return False
-
-        for true_text in true_text_list:
-            if result_text == true_text:
-                current_url = self.chrome.current_url
-                true_comment = f"{site_name} に {domain} を検知しました!: {self.currentDate}\nurl: {current_url}"
-                self.logger.info(true_comment)
-                return True
-
-        true_comment = f"※確認必要\n{site_name} にある {domain} は通常とは違うステータスです\n（※サイト修正された可能性があります）: {self.currentDate}\nurl: {current_url}"
-        self.logger.info(true_comment)
-        return True
-
-
-# ----------------------------------------------------------------------------------

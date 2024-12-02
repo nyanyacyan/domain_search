@@ -43,7 +43,7 @@ class SpreadsheetRead:
 # ----------------------------------------------------------------------------------
 # スプシ読み込みからpandasでの解析→文字列データを仮想的なファイルを作成
 
-    def load_spreadsheet(self):
+    def load_spreadsheet(self, key_col):
         # スプシデータにアクセス
         spreadsheet = requests.get(self.sheet_url)
 
@@ -57,7 +57,7 @@ class SpreadsheetRead:
         df = pd.read_csv(data_io, on_bad_lines='skip')
 
         # Indexを「account_id」にしたデータフレームを返してる
-        return df.set_index('ID')
+        return df.set_index(key_col)
 
 
 # ----------------------------------------------------------------------------------

@@ -31,6 +31,7 @@ class BaseToPath:
         # インスタンス
         self.fileNotFoundError = AccessFileNotFoundError(debugMode=debugMode)
         self.currentDate = datetime.now().strftime('%y%m%d')
+        self.fullCurrentDate = datetime.now().strftime('%y%m%d_%H%M%S')
 
 
 # ----------------------------------------------------------------------------------
@@ -177,6 +178,22 @@ class BaseToPath:
 
 
 # ----------------------------------------------------------------------------------
+# Result > SubDir > FileName0101.txt
+
+    def getResultSubDirDateFilePath(self, subDirName: str, fileName: str, extension: str):
+        resultOutputPath = self.getResultOutputPath()
+        dirPath = resultOutputPath / subDirName
+        file = fileName + self.fullCurrentDate + extension
+        FilePath = dirPath / file
+        self.logger.warning(f"FilePath: {FilePath}")
+        self.logger.debug(f"FilePathの型: {type(FilePath)}")
+        self.isDirExists(path=dirPath)
+        self.logger.debug(f"FilePath: {FilePath}")
+        return FilePath
+
+
+# ----------------------------------------------------------------------------------
+
 # Result > SubDir > 0101.db
 
     def getResultDBDirPath(self, subDirName: str=SubDir.DBSubDir.value):

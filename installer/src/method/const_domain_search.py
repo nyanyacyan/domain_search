@@ -28,10 +28,28 @@ class SubDir(Enum):
 
 
 # ----------------------------------------------------------------------------------
-
+#! 基本必須
 
 class FileName(Enum):
     RESULT_FILE='result_summary'
+    TRUE_HISTORY='True 検知履歴'
+    FALSE_HISTORY='False 検知履歴'
+
+
+# ----------------------------------------------------------------------------------
+#! 基本必須
+
+class Extension(Enum):
+    text='.txt'
+    csv='.csv'
+    json='.json'
+    pickle='.pkl'
+    excel='.xlsx'
+    yaml='.yaml'
+    cookie='cookie.pkl'
+    DB='.db'
+    PNG='.png'
+
 
 
 # ----------------------------------------------------------------------------------
@@ -66,12 +84,23 @@ class GssInfo(Enum):
     ]
 
 
-    XPATH_COL=[
+    SEARCH_XPATH_COL=[
         'search_input_xpath',
         'search_click_xpath',
-        'result_xpath',
-        'xpath_4',
-        'xpath_5',
+    ]
+
+
+    TRUE_XPATH=[
+        'true_xpath_1',
+        'true_xpath_2',
+        'true_xpath_3',
+    ]
+
+
+    FALSE_XPATH=[
+        'false_xpath_1',
+        'false_xpath_2',
+        'false_xpath_3',
     ]
 
 
@@ -94,22 +123,6 @@ class TableName(Enum):
     Cookie='cookiesDB'
     TEXT='text'
     IMAGE='image'
-
-
-# ----------------------------------------------------------------------------------
-
-
-class Extension(Enum):
-    text='.txt'
-    csv='.csv'
-    json='.json'
-    pickle='.pkl'
-    excel='.xlsx'
-    yaml='.yaml'
-    cookie='cookie.pkl'
-    DB='.db'
-    PNG='.png'
-
 
 
 # ----------------------------------------------------------------------------------
