@@ -7,10 +7,10 @@
 
 import time
 import asyncio
-from installer.src.method.const import AccountId
+
 
 from method.base.utils import Logger
-from method.AsyncProcess import AsyncProcess
+from method.flow import Flow
 
 
 
@@ -24,26 +24,12 @@ class Main:
       self.getLogger = Logger(__name__, debugMode=debugMode)
       self.logger = self.getLogger.getLogger()
 
+      self.flow = Flow(debugMode=debugMode)
 
    async def main(self):
       start_time = time.time()
-      # (重い処理)
-      account_ids = [
-         # AccountId.account_id_a.value,
-         # AccountId.account_id_b.value,
-         # AccountId.account_id_c.value,
-         AccountId.account_id_d.value,
-         # AccountId.account_id_e.value,
-         # AccountId.account_id_f.value,
-         # AccountId.account_id_g.value,
-         # AccountId.account_id_h.value,
-         # AccountId.account_id_i.value,
-         # AccountId.account_id_j.value
-      ]
 
-      asyncProcess = AsyncProcess(account_ids=account_ids)
-
-      await asyncProcess.flow_task_process()
+      await self.flow.process()
 
       end_time = time.time()
 

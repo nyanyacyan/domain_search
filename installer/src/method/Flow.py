@@ -8,11 +8,11 @@
 import os, time, asyncio
 
 # 自作モジュール
-from base.utils import Logger
-from base.pyppeteer import PyppeteerUtils
-from const_domain_search import SiteUrl, GssInfo
-from base.chrome import ChromeManager
-from base.gss_to_notify import GssToNotify
+from .base.utils import Logger
+from .base.pyppeteer import PyppeteerUtils
+from .const_domain_search import SiteUrl, GssInfo
+from .base.chrome import ChromeManager
+from .base.gss_to_notify import GssToNotify
 
 
 # ----------------------------------------------------------------------------------

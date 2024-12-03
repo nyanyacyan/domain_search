@@ -23,8 +23,8 @@ from .path import BaseToPath
 from .fileWrite import AppendWrite
 from .driverDeco import ClickDeco
 
-from const_domain_search import GssInfo, Extension, SubDir, SendMessage, FileName
-from const_element_domain import OnamaeXpath
+from ..const_domain_search import GssInfo, Extension, SubDir, SendMessage, FileName
+from ..const_element_domain import OnamaeXpath
 
 load_dotenv()
 
@@ -51,6 +51,7 @@ class GssToNotify:
         self.currentDate = datetime.now().strftime('%y%m%d_%H%M%S')
         self.append_write = AppendWrite(debugMode=debugMode)
         self.can_wait = ClickDeco(debugMode=debugMode)
+
 
 # ----------------------------------------------------------------------------------
 
@@ -117,21 +118,21 @@ class GssToNotify:
         self.logger.debug(f"\ntrue_elements: {true_elements}\nfalse_elements: {false_elements}")
 
         if true_elements:
-            true_comment = f"{self.currentDate}: {site_name} に {domain} にあることを検知しました\n\n"
+            true_comment = f"【TrueElement発見】{self.currentDate}: {site_name} に {domain} にあることを検知しました\n\n"
             self.logger.debug(f'true_comment: {true_comment}')
             # 検知履歴に追記
             self.append_write.append_result_text(data=true_comment, subDirName=subDirName, fileName=FileName.TRUE_HISTORY.value)
             return True
 
         elif false_elements:
-            false_comment = f"{self.currentDate}: {site_name} に {domain} はありません。\n\n"
+            false_comment = f"【FalseElement発見】{self.currentDate} : {site_name} に {domain} はありません。\n\n"
             self.logger.debug(f'false_comment: {false_comment}')
             # 検知履歴に追記
             self.append_write.append_result_text(data=false_comment, subDirName=subDirName, fileName=FileName.FALSE_HISTORY.value)
             return False
 
         else:
-            none_comment = f"{self.currentDate}: ※確認必要\n{site_name} にある {domain} は通常とは違うステータスです（※サイト修正された可能性があります）\n\n"
+            none_comment = f"【検知できず】{self.currentDate}: ※確認必要\n{site_name} にある {domain} は通常とは違うステータスです（※サイト修正された可能性があります）\n\n"
             self.append_write.append_result_text(data=none_comment, subDirName=subDirName, fileName=FileName.FALSE_HISTORY.value)
             return False
 
