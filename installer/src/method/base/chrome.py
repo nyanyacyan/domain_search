@@ -77,7 +77,7 @@ class ChromeManager:
         self.logger.warning(f"インストールされた ChromeDriver バージョン: {chromeDriverVersion}")
 
         chromeOptions = Options()
-        # chromeOptions.add_argument("--headless=new")  # ヘッドレスモードで実行
+        chromeOptions.add_argument("--headless=new")  # ヘッドレスモードで実行
         chromeOptions.add_argument(f"--window-position=0,0")
         # chromeOptions.add_argument("--window-size=1440,900")  # ウィンドウサイズの指定
         chromeOptions.add_argument("start-maximized")

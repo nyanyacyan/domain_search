@@ -45,6 +45,7 @@ class Flow:
 
     async def process(self):
         await self.gss_to_notify.flowProcess()
+        self.chrome.quit
 
 
 
